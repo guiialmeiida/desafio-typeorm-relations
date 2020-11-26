@@ -1,8 +1,8 @@
-import { getRepository, Repository, In } from 'typeorm';
-
-import IProductsRepository from '@modules/products/repositories/IProductsRepository';
 import ICreateProductDTO from '@modules/products/dtos/ICreateProductDTO';
 import IUpdateProductsQuantityDTO from '@modules/products/dtos/IUpdateProductsQuantityDTO';
+import IProductsRepository from '@modules/products/repositories/IProductsRepository';
+import AppError from '@shared/errors/AppError';
+import { getRepository, In, Repository } from 'typeorm';
 import Product from '../entities/Product';
 
 interface IFindProducts {
@@ -21,21 +21,55 @@ class ProductsRepository implements IProductsRepository {
     price,
     quantity,
   }: ICreateProductDTO): Promise<Product> {
-    // TODO
+    const product = await this.ormRepository.create({
+      name,
+      price,
+      quantity,
+    });
+
+    console.log('create in repo');
+
+    await this.ormRepository.save(product);
+
+    return product;
   }
 
-  public async findByName(name: string): Promise<Product | undefined> {
-    // TODO
+  public async findByName(
+    name: string,
+    create?: boolean,
+  ): Promise<Product | undefined> {
+    const product = await this.ormRepository.findOne({
+      where: {
+        name,
+      },
+    });
+
+    if (!product && !create) {
+      throw new AppError('Product not found');
+    }
+
+    return product;
   }
 
   public async findAllById(products: IFindProducts[]): Promise<Product[]> {
-    // TODO
+    const productIds = products.map(product => product.id);
+    const productFounds = await this.ormRepository.find({
+      where: {
+        id: In(productIds),
+      },
+    });
+
+    if (productFounds.length < 1) {
+      throw new AppError('Product not found');
+    }
+
+    return productFounds;
   }
 
   public async updateQuantity(
     products: IUpdateProductsQuantityDTO[],
   ): Promise<Product[]> {
-    // TODO
+    return this.ormRepository.save(products);
   }
 }
 
